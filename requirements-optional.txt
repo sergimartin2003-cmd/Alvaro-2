@@ -32,3 +32,9 @@ scikit-learn>=1.3
 twilio>=8.0
 dash>=2.16
 plotly>=5.20
+
+# Jarvis: LLM conversacional + voz
+anthropic>=0.40
+SpeechRecognition>=3.10
+gTTS>=2.5
+pygame>=2.5

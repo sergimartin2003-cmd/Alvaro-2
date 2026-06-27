@@ -25,6 +25,7 @@ Market Data Feeds → Ingestion → (Kafka/Redis/TimescaleDB) → Processing
 | Alerts | `quant_terminal.alerts` | Alertas multi-canal (email, SMS, Slack, Discord, Telegram) + **alertas Telegram con formato rico** + dashboard Dash |
 | Dashboard | `quant_terminal.dashboard` | Dashboard web dark-mode: overview de mercado, tablas top opportunities/risks, detalle por activo (radar), ranking por clase |
 | Orquestador | `main.py` | Integra todo y lo corre en paralelo (ranking + alertas + dashboard + scheduler diario + health) con apagado ordenado |
+| Jarvis | `quant_terminal.jarvis` + `jarvis_main.py` | Asistente de trading conversacional: **advisor diario** (briefing con top compras/evitar, riesgos, acciones), **asistente** por texto/voz con detección de intención, e integración con **Claude (Opus 4.8)** para lenguaje natural — con fallback offline por plantilla |
 
 ## Instalación
 
@@ -82,6 +83,21 @@ python main.py config/config.yaml
 `main.py` lanza en paralelo el ranking engine (análisis completo cada 5 min,
 top-10 cada 30 s), el dispatcher de alertas Telegram, el dashboard web
 (`http://localhost:8050`), el resumen diario programado y el health monitor.
+
+### Jarvis (asistente conversacional)
+
+```bash
+cp quant_terminal/config/jarvis_config.example.yaml config/jarvis_config.yaml
+export ANTHROPIC_API_KEY=...                 # opcional: activa respuestas con Claude
+python jarvis_main.py --once                 # genera un briefing y termina
+python jarvis_main.py config/jarvis_config.yaml   # modo interactivo (texto / 'voz')
+```
+
+Jarvis funciona **sin LLM ni red** usando un resumen de plantilla y handlers de
+intención (ver `examples/run_jarvis_demo.py`); con `ANTHROPIC_API_KEY` y el SDK
+`anthropic`, el resumen diario y las preguntas libres pasan a usar Claude
+Opus 4.8. La voz (reconocimiento + TTS) requiere `SpeechRecognition`, `gTTS` y
+`pygame`.
 
 ## Módulos cuantitativos avanzados
 
