@@ -1,0 +1,82 @@
+# Terminal de Trading Cuantitativa
+
+Sistema de trading cuantitativo institucional que integra múltiples fuentes de
+datos en tiempo real (mercado, macro, sentimiento, flujo de opciones,
+microestructura) y genera señales por **confluencia de factores**.
+
+> ⚠️ **Aviso**: Artefacto de investigación para estudio de estrategias
+> sistemáticas. **No es asesoramiento financiero.** Nunca uses capital real sin
+> backtesting exhaustivo y paper trading previo.
+
+## Arquitectura
+
+```
+Market Data Feeds → Ingestion → (Kafka/Redis/TimescaleDB) → Processing
+        → Signal Aggregation → Risk/Decision → Alerts/Dashboard
+```
+
+| Capa | Módulo | Contenido |
+|------|--------|-----------|
+| Ingestion | `quant_terminal.ingestion` | Kafka producer, scraper Forex Factory, Twitter/X, noticias RSS, market data (Polygon/Alpaca), orquestador |
+| Processing | `quant_terminal.processing` | Indicadores técnicos, modelos estocásticos (OU, GARCH), ML (LSTM+XGBoost, transformers), flujo de opciones, VIX term structure, cross-asset, multi-timeframe, Fed watch, carry trade, order flow, estacionalidad, risk parity, NLP/sentimiento, eventos económicos, reconocimiento de patrones, generación de señales |
+| Aggregation | `quant_terminal.aggregation` | Ensemble ponderado dinámico + combinación bayesiana |
+| Decision | `quant_terminal.decision` | Risk manager (VaR, position sizing), trade executor, sistema integrado |
+| Alerts | `quant_terminal.alerts` | Alertas multi-canal (email, SMS, Slack, Discord, Telegram) + dashboard Dash |
+
+## Instalación
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt          # núcleo (numpy, pandas, scipy, ta)
+pip install -e .                          # hace importable el paquete quant_terminal
+pip install -r requirements-optional.txt # pesados: tensorflow, transformers, kafka, etc.
+```
+
+> Si prefieres no instalar el paquete, ejecuta los scripts con `PYTHONPATH=.`
+> (p. ej. `PYTHONPATH=. python examples/run_demo.py`).
+
+El paquete está diseñado para que el **núcleo computacional** (indicadores,
+modelos estocásticos, agregación de señales, risk management) funcione solo con
+`numpy`/`pandas`/`scipy`/`ta`. Las dependencias pesadas y de red (Kafka,
+TensorFlow, transformers, tweepy, dash) se importan de forma perezosa y
+opcional: si no están instaladas, esos módulos lanzan un error claro solo al
+usarlos.
+
+## Uso rápido
+
+```python
+import numpy as np, pandas as pd
+from quant_terminal.processing.technical_indicators import TechnicalIndicatorEngine
+from quant_terminal.processing.signal_generator import SignalGenerator
+from quant_terminal.aggregation.signal_aggregator import SignalAggregator
+
+# 1. Indicadores técnicos sobre OHLCV
+engine = TechnicalIndicatorEngine()
+df = engine.calculate_all_indicators(ohlcv_df)
+
+# 2. Señal técnica por confluencia
+sig = SignalGenerator(engine).generate_signals(df)
+
+# 3. Agregación con otras fuentes
+agg = SignalAggregator().aggregate_signals({
+    "technical_analysis": {"signal": sig["final_signal"], "confidence": sig["confidence"], "strength": abs(sig["confluence_score"])},
+    "sentiment_analysis": {"signal": "BUY", "confidence": 0.6, "strength": 0.6},
+})
+print(agg["aggregate_signal"], agg["aggregate_score"])
+```
+
+Ver `examples/run_demo.py` para una demostración end-to-end con datos sintéticos.
+
+## Configuración
+
+Copia `quant_terminal/config/config.example.yaml` a `config.yaml` y rellena las
+claves de API. Usa variables de entorno para los secretos en producción.
+
+## Tests
+
+```bash
+pytest -q
+```
+
+Los tests cubren el núcleo que no requiere red ni modelos pesados (indicadores,
+modelos estocásticos, agregación, risk parity, risk manager).

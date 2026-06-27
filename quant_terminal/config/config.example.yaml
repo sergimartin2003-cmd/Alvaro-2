@@ -1,0 +1,54 @@
+# Configuración de ejemplo. Copia a config.yaml y rellena.
+# En producción usa variables de entorno para los secretos.
+
+portfolio_value: 100000          # USD
+max_risk_per_trade: 0.02         # 2% por trade
+max_total_exposure: 0.20         # 20% del portfolio
+
+kafka:
+  bootstrap_servers: ["localhost:9092"]
+
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+
+market_data:
+  polygon_api_key: "${POLYGON_API_KEY}"
+  alpaca_api_key: "${ALPACA_API_KEY}"
+  alpaca_secret: "${ALPACA_SECRET}"
+  data_url: "wss://stream.data.alpaca.markets/v2/sip"
+
+twitter:
+  api_key: "${TWITTER_API_KEY}"
+  api_secret: "${TWITTER_API_SECRET}"
+  access_token: "${TWITTER_ACCESS_TOKEN}"
+  access_secret: "${TWITTER_ACCESS_SECRET}"
+  political_accounts:
+    - "25073877"          # realDonaldTrump
+    - "822215679726100480"  # POTUS
+
+symbols: ["AAPL", "MSFT", "TSLA", "SPY", "QQQ", "BTC/USD"]
+
+alerts:
+  default_channels: ["slack"]
+  max_alerts_per_hour: 10
+  smtp:
+    server: smtp.gmail.com
+    port: 587
+    username: "${SMTP_USER}"
+    password: "${SMTP_PASS}"
+    from_email: "alerts@example.com"
+    to_email: "me@example.com"
+  twilio:
+    account_sid: "${TWILIO_SID}"
+    auth_token: "${TWILIO_TOKEN}"
+    from_number: "+10000000000"
+    to_number: "+10000000001"
+  slack:
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+  discord:
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+  telegram:
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"

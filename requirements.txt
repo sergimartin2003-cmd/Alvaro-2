@@ -1,0 +1,7 @@
+# Núcleo computacional — suficiente para indicadores, modelos estocásticos,
+# agregación de señales, risk management y tests.
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+ta>=0.11
+PyYAML>=6.0
