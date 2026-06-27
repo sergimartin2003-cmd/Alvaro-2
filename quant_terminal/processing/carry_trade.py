@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 
 class CarryTradeAnalyzer:
     """Oportunidades de carry y evaluación de riesgo por régimen de mercado."""
@@ -54,3 +56,66 @@ class CarryTradeAnalyzer:
         if score > 3:
             return "CAUTION", "Riesgo moderado - reducir tamaño"
         return "FAVORABLE", "Buen entorno para carry trades"
+
+
+class CarryTradeOptimizer:
+    """Optimización de carry (PROMPT 1.13): oportunidades, portfolio y monitoreo."""
+
+    def calculate_carry_opportunities(self, interest_rates: dict, fx_volatility: dict | None = None) -> list[dict]:
+        out = []
+        currencies = list(interest_rates)
+        for long_c in currencies:
+            for short_c in currencies:
+                if long_c == short_c:
+                    continue
+                carry = interest_rates[long_c] - interest_rates[short_c]
+                if carry <= 0:
+                    continue
+                pair = f"{long_c}{short_c}"
+                vol = (fx_volatility or {}).get(pair, 10.0)
+                risk_adj = carry / vol if vol else carry
+                out.append({
+                    "pair": f"{long_c}/{short_c}",
+                    "long_currency": long_c,
+                    "short_currency": short_c,
+                    "annual_carry": float(carry),
+                    "volatility": float(vol),
+                    "risk_adjusted_carry": float(risk_adj),
+                    "sharpe_ratio": float(risk_adj),
+                })
+        out.sort(key=lambda x: x["risk_adjusted_carry"], reverse=True)
+        return out
+
+    def optimize_carry_portfolio(self, opportunities: list[dict], max_positions: int = 5,
+                                 max_weight: float = 0.20) -> dict:
+        selected = opportunities[:max_positions]
+        if not selected:
+            return {"portfolio": {}, "weights": {}, "expected_carry": 0.0,
+                    "expected_volatility": 0.0, "sharpe_ratio": 0.0}
+        scores = np.array([o["risk_adjusted_carry"] for o in selected])
+        w = np.minimum(scores / scores.sum(), max_weight)
+        w = w / w.sum()
+        weights = {o["pair"]: float(wi) for o, wi in zip(selected, w)}
+        exp_carry = float(sum(wi * o["annual_carry"] for wi, o in zip(w, selected)))
+        exp_vol = float(np.sqrt(sum((wi * o["volatility"]) ** 2 for wi, o in zip(w, selected))))
+        return {
+            "portfolio": selected,
+            "weights": weights,
+            "expected_carry": exp_carry,
+            "expected_volatility": exp_vol,
+            "sharpe_ratio": float(exp_carry / exp_vol) if exp_vol else 0.0,
+        }
+
+    def monitor_carry_trades(self, portfolio: list[dict], pnl: dict | None = None) -> list[dict]:
+        pnl = pnl or {}
+        out = []
+        for pos in portfolio:
+            p = pnl.get(pos["pair"], 0.0)
+            out.append({
+                "position": pos["pair"],
+                "pnl": float(p),
+                "carry_accumulated": float(pos["annual_carry"] / 252),
+                "exit_signal": p < -2 * pos["volatility"] / 100,
+                "risk_warning": "unwind risk" if pos["volatility"] > 15 else "",
+            })
+        return out
