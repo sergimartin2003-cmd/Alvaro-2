@@ -73,12 +73,27 @@ Ver `examples/run_demo.py` (decisión por símbolo) y `examples/run_ranking_demo
 (ranking de un universo + preview de alerta Telegram) para demostraciones
 end-to-end con datos sintéticos.
 
+### Probar la terminal (modo demo, sin claves)
+
+```bash
+pip install -r requirements.txt && pip install -e . && pip install dash plotly
+python main.py --demo        # dashboard poblado con datos sintéticos en http://localhost:8050
+```
+
+El modo `--demo` no necesita `config.yaml` ni claves de API: usa un universo de
+~26 activos con datos sintéticos para que el dashboard arranque **poblado**
+(gauge, tablas de top oportunidades/riesgos y ranking por clase).
+
 ### Operación en vivo
 
 ```bash
 cp quant_terminal/config/config.example.yaml config/config.yaml  # y rellena claves
 python main.py config/config.yaml
 ```
+
+> ⚠️ Sin claves de Alpaca/Polygon en `config.yaml`, el proveedor de datos en
+> vivo falla y el dashboard se muestra **vacío** (Assets: 0). Usa `--demo` para
+> verlo funcionando, o rellena las claves para datos reales.
 
 `main.py` lanza en paralelo el ranking engine (análisis completo cada 5 min,
 top-10 cada 30 s), el dispatcher de alertas Telegram, el dashboard web

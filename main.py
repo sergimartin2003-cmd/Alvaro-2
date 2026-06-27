@@ -38,8 +38,44 @@ def _expand_env(obj):
     return obj
 
 
+def _demo_default_config() -> dict:
+    """Config autocontenida para el modo demo (sin claves ni red)."""
+    return {
+        "ranking_engine": {"update_interval_full": 300, "update_interval_top10": 30},
+        "assets_universe": {
+            "stocks": {"mega_cap": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "JPM"],
+                       "growth": ["AMD", "NFLX", "CRM", "ORCL"]},
+            "forex": {"majors": ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD"]},
+            "crypto": {"top": ["BTC/USD", "ETH/USD", "SOL/USD", "XRP/USD"]},
+            "commodities": {"metals": ["XAU/USD", "XAG/USD"]},
+            "indices": {"us": ["SPX", "NDX", "DJI", "VIX"]},
+        },
+        "dashboard": {"host": "0.0.0.0", "port": 8050},
+    }
+
+
+def _synthetic_ohlcv(symbol: str, n: int = 220):
+    """OHLCV sintético determinista por símbolo (para modo demo)."""
+    import numpy as np
+    import pandas as pd
+
+    seed = abs(hash(symbol)) % (2**32)
+    rng = np.random.default_rng(seed)
+    trend = rng.uniform(-0.004, 0.004)  # tendencia distinta por activo
+    close = 100 * np.exp(np.cumsum(rng.normal(trend, 0.012, n)))
+    high = close * (1 + np.abs(rng.normal(0, 0.003, n)))
+    low = close * (1 - np.abs(rng.normal(0, 0.003, n)))
+    open_ = np.concatenate([[close[0]], close[:-1]])
+    volume = rng.integers(1_000_000, 5_000_000, n)
+    idx = pd.date_range("2025-01-01", periods=n, freq="D")
+    return pd.DataFrame(
+        {"open": open_, "high": high, "low": low, "close": close, "volume": volume}, index=idx
+    )
+
+
 class TradingSystemOrchestrator:
-    def __init__(self, config_path: str = "config/config.yaml") -> None:
+    def __init__(self, config_path: str = "config/config.yaml", demo: bool = False) -> None:
+        self.demo = demo
         self.config = self._load_config(config_path)
         self.running = False
         self._setup_components()
@@ -47,8 +83,17 @@ class TradingSystemOrchestrator:
     def _load_config(self, config_path: str) -> dict:
         import yaml
 
-        with open(config_path, "r", encoding="utf-8") as f:
-            return _expand_env(yaml.safe_load(f))
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = _expand_env(yaml.safe_load(f)) or {}
+        except FileNotFoundError:
+            if self.demo:
+                logger.info("Sin %s; usando configuración demo integrada", config_path)
+                return _demo_default_config()
+            raise
+        if self.demo and not cfg.get("assets_universe"):
+            cfg = {**_demo_default_config(), **cfg}
+        return cfg
 
     def _setup_components(self) -> None:
         from quant_terminal.alerts.telegram_alerts import TelegramAlertSystem
@@ -61,9 +106,16 @@ class TradingSystemOrchestrator:
             alpaca_api_key=md.get("alpaca_api_key"),
             alpaca_secret=md.get("alpaca_secret"),
         )
-        self.ranking_engine = RealTimeRankingEngine(
-            self.config, data_provider=self._default_data_provider
-        )
+        if self.demo:
+            self.ranking_engine = RealTimeRankingEngine(
+                self.config,
+                data_provider=lambda sym, cls: _synthetic_ohlcv(sym),
+                context_provider=self._demo_context_provider,
+            )
+        else:
+            self.ranking_engine = RealTimeRankingEngine(
+                self.config, data_provider=self._default_data_provider
+            )
         self.telegram_alerts = TelegramAlertSystem(self.config.get("telegram", {}))
 
         # El dashboard es opcional (depende de Dash).
@@ -81,6 +133,20 @@ class TradingSystemOrchestrator:
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
         return self.market_data_client.get_historical_data(symbol, "1Day", start, end)
+
+    @staticmethod
+    def _demo_context_provider(symbol: str, asset_class: str) -> dict:
+        """Sentimiento/opciones/ML sintéticos para variar los scores en demo."""
+        import numpy as np
+
+        rng = np.random.default_rng(abs(hash(("ctx", symbol))) % (2**32))
+        base = float(rng.uniform(30, 90))
+        return {
+            "sentiment_score": base,
+            "options_flow_score": float(np.clip(base + rng.uniform(-15, 15), 0, 100)),
+            "ml_prediction_score": float(np.clip(base + rng.uniform(-15, 15), 0, 100)),
+            "macro_score": float(rng.uniform(40, 70)),
+        }
 
     # --------------------------------------------------------------- tareas
     async def run(self) -> None:
@@ -178,8 +244,12 @@ class TradingSystemOrchestrator:
 
 
 def main() -> None:
-    config_path = sys.argv[1] if len(sys.argv) > 1 else "config/config.yaml"
-    orchestrator = TradingSystemOrchestrator(config_path)
+    demo = "--demo" in sys.argv
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    config_path = args[0] if args else "config/config.yaml"
+    if demo:
+        logger.info("=== MODO DEMO: datos sintéticos, sin claves ni red ===")
+    orchestrator = TradingSystemOrchestrator(config_path, demo=demo)
     try:
         asyncio.run(orchestrator.run())
     except KeyboardInterrupt:
