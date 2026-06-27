@@ -20,8 +20,11 @@ Market Data Feeds → Ingestion → (Kafka/Redis/TimescaleDB) → Processing
 | Ingestion | `quant_terminal.ingestion` | Kafka producer, scraper Forex Factory, Twitter/X, noticias RSS, market data (Polygon/Alpaca), orquestador |
 | Processing | `quant_terminal.processing` | Indicadores técnicos, modelos estocásticos (OU, GARCH), ML (LSTM+XGBoost, transformers), flujo de opciones, VIX term structure, cross-asset, multi-timeframe, Fed watch, carry trade, order flow, estacionalidad, risk parity, NLP/sentimiento, eventos económicos, reconocimiento de patrones, generación de señales |
 | Aggregation | `quant_terminal.aggregation` | Ensemble ponderado dinámico + combinación bayesiana |
+| Analysis | `quant_terminal.analysis` | **Motor de ranking en tiempo real**: score 0-100 por categoría, acción STRONG_BUY..STRONG_SELL, razones/catalizadores/riesgos, top oportunidades/riesgos, resumen de mercado |
 | Decision | `quant_terminal.decision` | Risk manager (VaR, position sizing), trade executor, sistema integrado |
-| Alerts | `quant_terminal.alerts` | Alertas multi-canal (email, SMS, Slack, Discord, Telegram) + dashboard Dash |
+| Alerts | `quant_terminal.alerts` | Alertas multi-canal (email, SMS, Slack, Discord, Telegram) + **alertas Telegram con formato rico** + dashboard Dash |
+| Dashboard | `quant_terminal.dashboard` | Dashboard web dark-mode: overview de mercado, tablas top opportunities/risks, detalle por activo (radar), ranking por clase |
+| Orquestador | `main.py` | Integra todo y lo corre en paralelo (ranking + alertas + dashboard + scheduler diario + health) con apagado ordenado |
 
 ## Instalación
 
@@ -65,7 +68,20 @@ agg = SignalAggregator().aggregate_signals({
 print(agg["aggregate_signal"], agg["aggregate_score"])
 ```
 
-Ver `examples/run_demo.py` para una demostración end-to-end con datos sintéticos.
+Ver `examples/run_demo.py` (decisión por símbolo) y `examples/run_ranking_demo.py`
+(ranking de un universo + preview de alerta Telegram) para demostraciones
+end-to-end con datos sintéticos.
+
+### Operación en vivo
+
+```bash
+cp quant_terminal/config/config.example.yaml config/config.yaml  # y rellena claves
+python main.py config/config.yaml
+```
+
+`main.py` lanza en paralelo el ranking engine (análisis completo cada 5 min,
+top-10 cada 30 s), el dispatcher de alertas Telegram, el dashboard web
+(`http://localhost:8050`), el resumen diario programado y el health monitor.
 
 ## Configuración
 

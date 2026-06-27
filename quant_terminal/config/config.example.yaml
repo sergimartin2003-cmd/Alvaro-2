@@ -30,6 +30,46 @@ twitter:
 
 symbols: ["AAPL", "MSFT", "TSLA", "SPY", "QQQ", "BTC/USD"]
 
+# Motor de ranking en tiempo real
+ranking_engine:
+  update_interval_full: 300   # análisis completo cada 5 min
+  update_interval_top10: 30   # refresco del top 10 cada 30 s
+  weights:                    # deben sumar ~1.0 (se normalizan igualmente)
+    technical: 0.25
+    sentiment: 0.20
+    macro: 0.15
+    options_flow: 0.15
+    ml_prediction: 0.15
+    seasonality: 0.05
+    volume_profile: 0.03
+    correlation: 0.02
+  alert_thresholds:
+    strong_buy: 75
+    buy: 60
+    sell: 40
+    strong_sell: 25
+    score_change: 10
+
+# Universo de activos a monitorear
+assets_universe:
+  stocks:
+    mega_cap: [AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, JPM, V]
+    high_growth: [AMD, CRM, NFLX, ADBE, INTC, ORCL, QCOM]
+  forex:
+    majors: [EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD]
+  crypto:
+    top: [BTC/USD, ETH/USD, SOL/USD, XRP/USD]
+  commodities:
+    metals: [XAU/USD, XAG/USD]
+    energy: [CL/USD, NG/USD]
+  indices:
+    us: [SPX, NDX, DJI, RUT, VIX]
+
+dashboard:
+  host: 0.0.0.0
+  port: 8050
+  refresh_interval: 30
+
 alerts:
   default_channels: ["slack"]
   max_alerts_per_hour: 10
