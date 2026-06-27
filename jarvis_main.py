@@ -55,6 +55,7 @@ class JarvisSystem:
         from quant_terminal.jarvis.assistant import JarvisAssistant
         from quant_terminal.jarvis.daily_advisor import DailyMarketAdvisor
         from quant_terminal.jarvis.llm import LLMClient
+        from quant_terminal.jarvis.telegram_bot import JarvisTelegramBot
 
         md = self.config.get("market_data", {})
         self.market_data_client = MarketDataClient(
@@ -73,6 +74,10 @@ class JarvisSystem:
             self.config, daily_advisor=self.daily_advisor, llm_client=self.llm_client,
             ranking_engine=self.ranking_engine,
         )
+        self.bot = JarvisTelegramBot(
+            self.config, assistant=self.assistant, daily_advisor=self.daily_advisor,
+            ranking_engine=self.ranking_engine,
+        )
         logger.info("Componentes de Jarvis inicializados (LLM disponible: %s)", self.llm_client.available)
 
     def _data_provider(self, symbol: str, asset_class: str):
@@ -84,11 +89,11 @@ class JarvisSystem:
     async def run(self) -> None:
         self.running = True
         logger.info("Iniciando Jarvis System...")
-        await asyncio.gather(
-            self._ranking_loop(),
-            self._morning_briefing_scheduler(),
-            return_exceptions=True,
-        )
+        tasks = [self._ranking_loop(), self._morning_briefing_scheduler()]
+        if self.bot.bot_token:
+            tasks.append(self.bot.run_polling())
+            logger.info("Bot de Telegram activado")
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _ranking_loop(self, interval: int = 300) -> None:
         while self.running:
@@ -140,6 +145,12 @@ def main() -> None:
     jarvis = JarvisSystem(config_path)
     if "--once" in sys.argv:
         print(asyncio.run(jarvis.run_once()))
+        return
+    if "--bot" in sys.argv:
+        async def _run_bot():
+            await jarvis.ranking_engine.analyze_all_assets()
+            await jarvis.bot.run_polling()
+        asyncio.run(_run_bot())
         return
     asyncio.run(jarvis.start_interactive_mode())
 

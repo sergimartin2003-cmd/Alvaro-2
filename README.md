@@ -91,7 +91,14 @@ cp quant_terminal/config/jarvis_config.example.yaml config/jarvis_config.yaml
 export ANTHROPIC_API_KEY=...                 # opcional: activa respuestas con Claude
 python jarvis_main.py --once                 # genera un briefing y termina
 python jarvis_main.py config/jarvis_config.yaml   # modo interactivo (texto / 'voz')
+python jarvis_main.py --bot                   # bot de Telegram (long-polling)
 ```
+
+**Bot de Telegram** (`quant_terminal/jarvis/telegram_bot.py`): habla con Jarvis
+desde Telegram con `/briefing`, `/ranking [n]`, `/risks`, `/analyze SÍMBOLO`,
+`/sentiment`, `/recommendations`, `/help` — y cualquier texto libre se enruta al
+asistente conversacional. Se activa automáticamente en `python jarvis_main.py`
+si hay `bot_token` en la config, o en exclusiva con `--bot`.
 
 Jarvis funciona **sin LLM ni red** usando un resumen de plantilla y handlers de
 intención (ver `examples/run_jarvis_demo.py`); con `ANTHROPIC_API_KEY` y el SDK
