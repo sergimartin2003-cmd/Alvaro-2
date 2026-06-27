@@ -98,6 +98,14 @@ def test_assistant_handlers():
     assert "LLM" in general or "ayuda" in general.lower()
 
 
+def test_closing_summary():
+    eng = _engine()
+    advisor = DailyMarketAdvisor(ranking_engine=eng)
+    text = advisor.format_closing_summary()
+    assert "CIERRE DE MERCADO" in text
+    assert "Sentimiento" in text
+
+
 def test_conversation_history_tracked():
     assistant = JarvisAssistant()
     asyncio.run(assistant.process_text_input("ayuda"))

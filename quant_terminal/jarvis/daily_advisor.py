@@ -203,6 +203,32 @@ class DailyMarketAdvisor:
             out += ["", "✅ <b>ACCIONES:</b>"] + [f"• {a}" for a in b.action_items[:4]]
         return "\n".join(out)
 
+    def format_closing_summary(self) -> str:
+        """Resumen conciso de cierre de mercado a partir del ranking actual."""
+        if self.ranking_engine is None:
+            return "🔔 Cierre de mercado: sin datos de ranking."
+        s = self.ranking_engine.get_market_summary()
+        lines = [
+            f"🔔 <b>CIERRE DE MERCADO - {datetime.now():%Y-%m-%d}</b>",
+            f"Sentimiento: <b>{s.get('market_sentiment', 'NEUTRAL')}</b> "
+            f"(score medio {s.get('average_score', 50):.1f})",
+            f"Alcistas {s.get('bullish_assets', 0)} / bajistas {s.get('bearish_assets', 0)} / "
+            f"neutrales {s.get('neutral_assets', 0)} de {s.get('total_assets_analyzed', 0)}",
+        ]
+        top = s.get("top_opportunities", [])[:3]
+        if top:
+            lines.append("🟢 Top del día: " + ", ".join(f"{o['symbol']} ({o['score']:.0f})" for o in top))
+        risks = s.get("top_risks", [])[:3]
+        if risks:
+            lines.append("🔴 Más débiles: " + ", ".join(f"{o['symbol']} ({o['score']:.0f})" for o in risks))
+        lines.append(f"Mañana, {self.user_name}: nuevo briefing a las 08:00.")
+        return "\n".join(lines)
+
+    async def send_closing_summary_to_telegram(self):
+        if self.telegram_alerts is None:
+            raise ValueError("No hay telegram_alerts configurado")
+        return await self.telegram_alerts.send(self.format_closing_summary(), priority="MEDIUM")
+
     async def send_daily_briefing_to_telegram(self, briefing: DailyRecommendation):
         if self.telegram_alerts is None:
             raise ValueError("No hay telegram_alerts configurado")

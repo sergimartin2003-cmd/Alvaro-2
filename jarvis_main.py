@@ -89,7 +89,8 @@ class JarvisSystem:
     async def run(self) -> None:
         self.running = True
         logger.info("Iniciando Jarvis System...")
-        tasks = [self._ranking_loop(), self._morning_briefing_scheduler()]
+        tasks = [self._ranking_loop(), self._morning_briefing_scheduler(),
+                 self._closing_summary_scheduler()]
         if self.bot.bot_token:
             tasks.append(self.bot.run_polling())
             logger.info("Bot de Telegram activado")
@@ -117,6 +118,20 @@ class JarvisSystem:
                 logger.info("Briefing matutino generado")
             except Exception as exc:
                 logger.error("Error en briefing matutino: %s", exc)
+
+    async def _closing_summary_scheduler(self, hour: int = 16, minute: int = 30) -> None:
+        while self.running:
+            now = datetime.now()
+            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if now > target:
+                target += timedelta(days=1)
+            await asyncio.sleep((target - now).total_seconds())
+            try:
+                if self.telegram.chat_ids:
+                    await self.daily_advisor.send_closing_summary_to_telegram()
+                logger.info("Resumen de cierre enviado")
+            except Exception as exc:
+                logger.error("Error en resumen de cierre: %s", exc)
 
     async def run_once(self) -> str:
         """Genera y devuelve un briefing una sola vez (sin bucle)."""

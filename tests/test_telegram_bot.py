@@ -79,3 +79,37 @@ def test_handle_unknown_and_freetext():
 def test_analyze_without_symbol():
     bot = _bot()
     assert "Uso:" in asyncio.run(bot.handle("/analyze"))
+
+
+# ---- inline keyboards + callbacks ----
+def test_build_asset_keyboard():
+    kb = JarvisTelegramBot.build_asset_keyboard("AAPL")
+    row = kb["inline_keyboard"][0]
+    assert any("tradingview.com" in b.get("url", "") for b in row)
+    assert any(b.get("callback_data") == "analyze:AAPL" for b in row)
+    assert any(b.get("callback_data") == "mute:AAPL" for b in row)
+
+
+def test_build_ranking_keyboard():
+    kb = JarvisTelegramBot.build_ranking_keyboard(["AAPL", "TSLA"])
+    assert len(kb["inline_keyboard"]) == 2
+    assert kb["inline_keyboard"][0][0]["callback_data"] == "analyze:AAPL"
+    assert JarvisTelegramBot.build_ranking_keyboard([]) is None
+
+
+def test_markup_for():
+    bot = _bot()
+    assert bot._markup_for("analyze", "AAPL")["inline_keyboard"][0][1]["callback_data"] == "analyze:AAPL"
+    rk = bot._markup_for("ranking", "")
+    assert rk is not None and len(rk["inline_keyboard"]) >= 1
+    assert bot._markup_for("help", "") is None
+
+
+def test_handle_callback():
+    bot = _bot()
+    analysis = asyncio.run(bot.handle_callback("analyze:AAPL"))
+    assert "AAPL" in analysis
+    mute = asyncio.run(bot.handle_callback("mute:TSLA"))
+    assert "TSLA" in mute and "silenciad" in mute.lower()
+    assert "TSLA" in bot.muted
+    assert "no reconocida" in asyncio.run(bot.handle_callback("foo:bar")).lower()

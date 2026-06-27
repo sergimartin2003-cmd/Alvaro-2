@@ -97,8 +97,13 @@ python jarvis_main.py --bot                   # bot de Telegram (long-polling)
 **Bot de Telegram** (`quant_terminal/jarvis/telegram_bot.py`): habla con Jarvis
 desde Telegram con `/briefing`, `/ranking [n]`, `/risks`, `/analyze SÍMBOLO`,
 `/sentiment`, `/recommendations`, `/help` — y cualquier texto libre se enruta al
-asistente conversacional. Se activa automáticamente en `python jarvis_main.py`
-si hay `bot_token` en la config, o en exclusiva con `--bot`.
+asistente conversacional. Las respuestas incluyen **botones inline** (📊 Gráfico
+en TradingView, 🔍 Analizar, 🔕 Silenciar) gestionados por `callback_query`. Se
+activa automáticamente en `python jarvis_main.py` si hay `bot_token` en la
+config, o en exclusiva con `--bot`.
+
+`jarvis_main.py` programa además un **briefing matutino** (08:00) y un **resumen
+de cierre de mercado** (16:30) que se envían por Telegram.
 
 Jarvis funciona **sin LLM ni red** usando un resumen de plantilla y handlers de
 intención (ver `examples/run_jarvis_demo.py`); con `ANTHROPIC_API_KEY` y el SDK
