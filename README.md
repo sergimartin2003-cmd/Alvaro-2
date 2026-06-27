@@ -83,6 +83,34 @@ python main.py config/config.yaml
 top-10 cada 30 s), el dispatcher de alertas Telegram, el dashboard web
 (`http://localhost:8050`), el resumen diario programado y el health monitor.
 
+## Módulos cuantitativos avanzados
+
+Tres familias de 15 clases cada una (45 en total), con núcleos numéricos
+funcionales (numpy/scipy/pandas) y dependencias pesadas (TF/torch/SB3/networkx/
+hmmlearn) importadas de forma perezosa con fallbacks testeables.
+
+**Módulo 1 — Análisis cuantitativo (`quant_terminal/processing/`)**: superficie
+de volatilidad, order book imbalance, microestructura (VPIN/Avellaneda-Stoikov),
+pairs trading (cointegración), stat-arb (factores), HF alpha, cross-asset DCC,
+detección de régimen (HMM), anomalías, redes (contagio/riesgo sistémico),
+burbujas (LPPL), predicción de crashes, carry optimizer, momentum crash,
+liquidity shock.
+
+**Módulo 2 — Machine Learning (`quant_terminal/ml/`)**: transformers de series,
+RL trader (entorno gym-like), ensemble meta-learning, GAN, redes bayesianas,
+graph NN, few-shot/MAML, análisis de atención, neural ODE, normalizing flows,
+contrastive learning, meta-optimizer, self-supervised, multi-task, continual
+learning (EWC).
+
+**Módulo 3 — Microestructura (`quant_terminal/microstructure/`)**: order flow
+toxicity, market impact (Almgren-Chriss), liquidity provider, order book
+dynamics, trade classification (Lee-Ready), price discovery, optimal execution
+(TWAP/VWAP/IS/POV), smart order router, latency arbitrage, flash crash,
+liquidity cycles, order flow predictor, market resilience, toxicity filter,
+market quality.
+
+Cobertura: 108 tests sobre los núcleos numéricos (sin requerir las libs pesadas).
+
 ## Configuración
 
 Copia `quant_terminal/config/config.example.yaml` a `config.yaml` y rellena las
